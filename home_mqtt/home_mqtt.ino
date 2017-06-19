@@ -16,9 +16,9 @@ DallasTemperature sensors(&oneWire);
 
 // Update these with values suitable for your network.
 byte mac[]    = {  0xDE, 0xED, 0xBA, 0xFE, 0xFE, 0xED };
-IPAddress ip(192, 168, 1, 177);
-IPAddress gateway(192, 168, 1, 1);
-IPAddress server(200, 5, 235, 52);
+IPAddress ip(10, 105, 231, 177);
+IPAddress gateway(10, 105, 231, 1);
+IPAddress server(10, 105, 231, 153);
 
 EthernetClient ethClient;
 PubSubClient mqttClient(ethClient);
@@ -28,16 +28,27 @@ int in1 = 7;
 
 void callback(char* topic, byte* payload, unsigned int length) {
   String strTopic(topic);
-  if (strTopic == "casa/estado"){
-    //Serial.println("entro en el if");
-    if (digitalRead(in1)){
-    mqttClient.publish("casa/luz/porton", "apagada");
-    } else {
-      mqttClient.publish("casa/luz/porton", "encendida");
+  
+  //payload = 0 status
+  //payload = 1 change
+
+  if((char)payload[0] == '0'){
+    if (strTopic == "casa/luz/porton"){       
+      if (digitalRead(in1)){
+          mqttClient.publish("casa/luz/porton", "apagado");
+          } else {
+          mqttClient.publish("casa/luz/porton", "encendido");
+          }
       }
-    } else if (strTopic == "casa/luz/porton"){
-      digitalWrite(in1, !digitalRead(in1));
-      }
+    } else if((char)payload[0] == '1'){
+        digitalWrite(in1, !digitalRead(in1));
+        if (digitalRead(in1)){
+          mqttClient.publish("casa/luz/porton", "apagado");
+          } else {
+          mqttClient.publish("casa/luz/porton", "encendido");
+            }      
+    }
+  
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
@@ -77,7 +88,7 @@ void reconnect() {
   while (!mqttClient.connected()) {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
-    if (mqttClient.connect("arduinoClient")) {
+    if (mqttClient.connect("arduinoClient", "mi_usuario", "mi_clave")) {
       Serial.println("connected");
       // Once connected, publish an announcement...
       mqttClient.publish("casa","iniciado");
