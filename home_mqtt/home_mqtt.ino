@@ -16,9 +16,9 @@ DallasTemperature sensors(&oneWire);
 
 // Update these with values suitable for your network.
 byte mac[]    = {  0xDE, 0xED, 0xBA, 0xFE, 0xFE, 0xED };
-IPAddress ip(10, 105, 231, 177);
-IPAddress gateway(10, 105, 231, 1);
-IPAddress server(10, 105, 231, 153);
+IPAddress ip(192, 168, 1, 177);
+IPAddress gateway(192, 168, 1, 1);
+IPAddress server(200, 5, 235, 52);
 
 EthernetClient ethClient;
 PubSubClient mqttClient(ethClient);
@@ -35,18 +35,25 @@ void callback(char* topic, byte* payload, unsigned int length) {
   if((char)payload[0] == '0'){
     if (strTopic == "casa/luz/porton"){       
       if (digitalRead(in1)){
-          mqttClient.publish("casa/luz/porton", "apagado");
-          } else {
           mqttClient.publish("casa/luz/porton", "encendido");
+          } else {
+          mqttClient.publish("casa/luz/porton", "apagado");
           }
+      }
+    if (strTopic == "casa/temperatura/living"){
+        sensors.requestTemperatures(); 
+        char temp[10];
+        dtostrf(sensors.getTempCByIndex(0), 5, 1, temp);
+        delay(1);
+        mqttClient.publish("casa/temperatura/living", temp);          
       }
     } else if((char)payload[0] == '1'){
         digitalWrite(in1, !digitalRead(in1));
         if (digitalRead(in1)){
-          mqttClient.publish("casa/luz/porton", "apagado");
-          } else {
           mqttClient.publish("casa/luz/porton", "encendido");
-            }      
+          } else {
+          mqttClient.publish("casa/luz/porton", "apagado");
+            }  
     }
   
   Serial.print("Message arrived [");
@@ -57,31 +64,6 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
   Serial.println();
 }
-/*
-//String data;
-void callback(char* topic, byte* payload, unsigned int length) {
-  char dataArray[length];
-  for (int i=0;i<length;i++) {
-    dataArray[i] = (char)payload[i];
-  }
-  String rcvd(dataArray);
-  Serial.println();
-  //Serial.print(topic);
-  Serial.print(rcvd);
-
-  String strTopic = String((char*)topic);
-  //Print status
-  if(strTopic == "casa/estado"){// && rcvd == "estado"){
-    Serial.println("entro en el if");
-    //Print temperature:living
-    //String luz(digitalRead(in1));
-    if (digitalRead(in1)){
-    mqttClient.publish("casa/luz/porton", "encendida");
-    } else {
-      mqttClient.publish("casa/luz/porton", "apagada");
-    }
-  }  
-}*/
  
 void reconnect() {
   // Loop until we're reconnected
@@ -113,7 +95,8 @@ void setup()
   mqttClient.setCallback(callback);
   //Controlador relay luz porton
   pinMode(in1, OUTPUT);
- 
+  digitalWrite(in1, LOW);
+   
   Ethernet.begin(mac, ip);
   // Allow the hardware to sort itself out
   delay(1500);  
