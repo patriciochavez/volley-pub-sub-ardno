@@ -48,12 +48,14 @@ void callback(char* topic, byte* payload, unsigned int length) {
         mqttClient.publish("casa/temperatura/living", temp);          
       }
     } else if((char)payload[0] == '1'){
+      if (strTopic == "casa/luz/porton"){   
         digitalWrite(in1, !digitalRead(in1));
         if (digitalRead(in1)){
           mqttClient.publish("casa/luz/porton", "encendido");
           } else {
           mqttClient.publish("casa/luz/porton", "apagado");
-            }  
+            }
+      }
     }
   
   Serial.print("Message arrived [");
