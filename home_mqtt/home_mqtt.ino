@@ -25,6 +25,7 @@ PubSubClient mqttClient(ethClient);
 
 //relay luz porton (exterior)
 int in1 = 7;
+int sonido = 0;
 
 void callback(char* topic, byte* payload, unsigned int length) {
   String strTopic(topic);
@@ -40,13 +41,13 @@ void callback(char* topic, byte* payload, unsigned int length) {
           mqttClient.publish("casa/luz/porton", "apagado");
           }
       }
-    if (strTopic == "casa/temperatura/living"){
+    if (strTopic == "casa/estado/temperatura"){
         sensors.requestTemperatures(); 
         char temp[10];
         dtostrf(sensors.getTempCByIndex(0), 5, 1, temp);
         delay(1);
-        mqttClient.publish("casa/temperatura/living", temp);          
-      }
+        mqttClient.publish("casa/temperatura/living", temp);        
+      }    
     } else if((char)payload[0] == '1'){
       if (strTopic == "casa/luz/porton"){   
         digitalWrite(in1, !digitalRead(in1));
@@ -57,6 +58,38 @@ void callback(char* topic, byte* payload, unsigned int length) {
             }
       }
     }
+
+    if (strTopic == "casa/buzzer/distancia" && sonido == 1){
+      if((char)payload[0] == '1'){
+        //sonido 100mtrs
+        beep(50);
+        beep(50);
+        beep(50);          
+        } else if((char)payload[0] == '2'){
+        //sonido 200mtrs
+        beep(50);
+        beep(50);          
+        } else if((char)payload[0] == '3'){
+        //sonido 300mtrs
+        beep(50);          
+        }
+    }
+
+    if (strTopic == "casa/buzzer/sonido"){
+         if((char)payload[0] == '1'){
+          sonido = !sonido;
+          mqttClient.publish("casa/estado/buzzer", "0");
+         }
+    }
+
+  if (strTopic == "casa/estado/buzzer"){
+         if(sonido == 0){ //sin sonido
+            mqttClient.publish("casa/buzzer/sonido", "apagado");
+         } else if(sonido == 1){ //con sonido
+            mqttClient.publish("casa/buzzer/sonido", "encendido");
+         }
+    }
+
   
   Serial.print("Message arrived [");
   Serial.print(topic);
@@ -66,7 +99,14 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
   Serial.println();
 }
- 
+
+void beep(unsigned char pausa){
+            analogWrite(9, 20);
+            delay(pausa);                 // Espera
+            analogWrite(9, 0);            // Apaga
+            delay(pausa);                 // Espera
+}
+      
 void reconnect() {
   // Loop until we're reconnected
   while (!mqttClient.connected()) {
@@ -98,7 +138,8 @@ void setup()
   //Controlador relay luz porton
   pinMode(in1, OUTPUT);
   digitalWrite(in1, LOW);
-   
+  pinMode(9, OUTPUT);
+             
   Ethernet.begin(mac, ip);
   // Allow the hardware to sort itself out
   delay(1500);  
