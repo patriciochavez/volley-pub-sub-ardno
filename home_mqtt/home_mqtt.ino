@@ -4,15 +4,14 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
  
-// Data wire is plugged into pin 2 on the Arduino
-#define ONE_WIRE_BUS 2
- 
 // Setup a oneWire instance to communicate with any OneWire devices 
 // (not just Maxim/Dallas temperature ICs)
-OneWire oneWire(ONE_WIRE_BUS);
+OneWire oneWire1(2);
+OneWire oneWire2(4);
  
 // Pass our oneWire reference to Dallas Temperature.
-DallasTemperature sensors(&oneWire);
+DallasTemperature sensors1(&oneWire1);
+DallasTemperature sensors2(&oneWire2);
 
 // Update these with values suitable for your network.
 byte mac[]    = {  0xDE, 0xED, 0xBA, 0xFE, 0xFE, 0xED };
@@ -42,16 +41,24 @@ void callback(char* topic, byte* payload, unsigned int length) {
           }
       }
     if (strTopic == "casa/estado/temperatura"){
-        sensors.requestTemperatures(); 
-        char temp[10];
-        dtostrf(sensors.getTempCByIndex(0), 5, 1, temp);
-        delay(1);
-        mqttClient.publish("casa/temperatura/living", temp);        
+        sensors1.requestTemperatures(); 
+        char temp1[10];
+        delay(10);
+        dtostrf(sensors1.getTempCByIndex(0), 5, 1, temp1);
+        mqttClient.publish("casa/temperatura/exterior", temp1);         
+        sensors2.requestTemperatures(); 
+        char temp2[10];
+        delay(10);
+        dtostrf(sensors2.getTempCByIndex(0), 5, 1, temp2);        
+        mqttClient.publish("casa/temperatura/living", temp2);      
       }    
     } else if((char)payload[0] == '1'){
       if (strTopic == "casa/luz/porton"){   
         digitalWrite(in1, !digitalRead(in1));
         if (digitalRead(in1)){
+          beep(100);
+          beep(100);
+          beep(100);
           mqttClient.publish("casa/luz/porton", "encendido");
           } else {
           mqttClient.publish("casa/luz/porton", "apagado");
@@ -132,7 +139,12 @@ void reconnect() {
 void setup()
 {
   Serial.begin(115200);
-  sensors.begin();
+  pinMode(2, INPUT);
+  pinMode(4, INPUT);
+  digitalWrite(2, LOW); //Disable internal pull-up.
+  digitalWrite(4, LOW);
+  sensors1.begin();
+  sensors2.begin();
   mqttClient.setServer(server, 1883);
   mqttClient.setCallback(callback);
   //Controlador relay luz porton
@@ -146,28 +158,9 @@ void setup()
 }
  
 void loop()
-{
+{ 
   if (!mqttClient.connected()) {
     reconnect();
   }
-
-  // call sensors.requestTemperatures() to issue a global temperature
-  // request to all devices on the bus
-  //Serial.print(" Requesting temperatures...");
-  ////sensors.requestTemperatures(); // Send the command to get temperatures
-  //Serial.println("DONE");
-
-  //Serial.print("Temperature for Device 1 is: ");
-  //Serial.print(sensors.getTempCByIndex(0)); // Why "byIndex"? 
-    // You can have more than one IC on the same bus. 
-    // 0 refers to the first IC on the wire
-
-  ////char buffer[10];
-  ////dtostrf(sensors.getTempCByIndex(0), 5, 1, buffer);
-  ////Serial.println(buffer);
-  //mqttClient.publish("casa/temperatura/living", buffer);
-  
   mqttClient.loop();
-  ////delay(5000);
 }
-
