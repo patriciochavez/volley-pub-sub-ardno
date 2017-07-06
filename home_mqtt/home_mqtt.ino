@@ -43,7 +43,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     if (strTopic == "casa/estado/temperatura"){
         sensors1.requestTemperatures(); 
         char temp1[10];
-        delay(10);
+        delay(30);
         dtostrf(sensors1.getTempCByIndex(0), 5, 1, temp1);
         mqttClient.publish("casa/temperatura/exterior", temp1);         
         sensors2.requestTemperatures(); 
