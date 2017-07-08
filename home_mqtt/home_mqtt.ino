@@ -41,16 +41,34 @@ void callback(char* topic, byte* payload, unsigned int length) {
           }
       }
     if (strTopic == "casa/estado/temperatura"){
-        sensors1.requestTemperatures(); 
+        int outOfRangeE = 0;
+        while (outOfRangeE < 5){
+        sensors1.requestTemperatures();        
+        delay(1);
+        float tempE = sensors1.getTempCByIndex(0);
+        if (tempE > -127.0){
         char temp1[10];
-        delay(30);
-        dtostrf(sensors1.getTempCByIndex(0), 5, 1, temp1);
-        mqttClient.publish("casa/temperatura/exterior", temp1);         
+        dtostrf(tempE, 5, 1, temp1);
+        mqttClient.publish("casa/temperatura/exterior", temp1);
+        outOfRangeE = 10;
+        } else {
+          outOfRangeE += 1;
+          }         
+        }
+        int outOfRangeL = 0;
+        float tempL = sensors2.getTempCByIndex(0);
+        while (outOfRangeL < 5){        
         sensors2.requestTemperatures(); 
-        char temp2[10];
-        delay(10);
-        dtostrf(sensors2.getTempCByIndex(0), 5, 1, temp2);        
-        mqttClient.publish("casa/temperatura/living", temp2);      
+        delay(1);
+        if ( tempL > -127.0){     
+          char temp2[10];
+          dtostrf(tempL, 5, 1, temp2);   
+          mqttClient.publish("casa/temperatura/living", temp2);     
+          outOfRangeL = 10;
+        } else {
+          outOfRangeL += 1;
+          }         
+        }
       }    
     } else if((char)payload[0] == '1'){
       if (strTopic == "casa/luz/porton"){   
